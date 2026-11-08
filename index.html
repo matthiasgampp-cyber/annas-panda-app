@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Annas Panda App - Favorit des Tages</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti Library for child-friendly celebrations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts: Fredoka for rounded, child-friendly typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Pulse and Bounce Animations */
+        @keyframes gentle-bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.05); }
+        }
+
+        .animate-gentle-bounce {
+            animation: gentle-bounce 2s infinite ease-in-out;
+        }
+
+        /* Wheel Pointer Arrow pulse */
+        @keyframes pointer-tick {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2) translateY(2px); }
+            100% { transform: scale(1); }
+        }
+        .pointer-active {
+            animation: pointer-tick 0.15s ease-in-out;
+        }
+
+        /* Card elevation depth */
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(255, 182, 193, 0.4), 0 8px 10px -6px rgba(255, 182, 193, 0.2);
+        }
+
+        .btn-shadow {
+            box-shadow: 0 6px 0px #db2777, 0 10px 15px rgba(219, 39, 119, 0.3);
+        }
+        .btn-shadow:active {
+            box-shadow: 0 2px 0px #db2777, 0 4px 6px rgba(219, 39, 119, 0.3);
+            transform: translateY(4px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fdf2f8;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f472b6;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-pink-100 via-purple-100 to-indigo-100 min-h-screen text-slate-700 flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header Section -->
+    <header class="w-full bg-white/80 backdrop-blur-md pt-4 pb-3 px-4 text-center sticky top-0 z-30 border-b border-pink-200">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="text-3xl">🐼</span>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Annas Panda App</h1>
+            </div>
+            <button id="todayFavoritBadge" onclick="switchTab('wheel')" class="hidden bg-pink-100 border border-pink-300 text-pink-700 text-xs px-3 py-1 rounded-full font-semibold items-center gap-1 shadow-sm">
+                <span>🌟</span> <span id="todayPandaNameText">Boo</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-md w-full mx-auto p-4 flex flex-col justify-start">
+        
+        <!-- ================= TAB 1: DREHRAD (WHEEL) ================= -->
+        <section id="tab-wheel" class="flex flex-col items-center justify-center space-y-4 my-auto">
+            
+            <div class="text-center">
+                <h2 class="text-xl font-bold text-slate-800">Welches Kuscheltier ist dein Favorit?</h2>
+                <p class="text-xs text-pink-600 font-medium">Drücke & halte den Button zum Schwung holen!</p>
+            </div>
+
+            <!-- Wheel Canvas Container -->
+            <div class="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center my-2">
+                <!-- Pointer Arrow -->
+                <div id="wheelPointer" class="absolute -top-3 z-20 text-4xl filter drop-shadow-md transform -translate-x-1/2 left-1/2 transition-transform duration-75">
+                    🔻
+                </div>
+
+                <!-- Canvas Wheel -->
+                <canvas id="wheelCanvas" width="320" height="320" class="w-full h-full rounded-full card-shadow transition-transform"></canvas>
+
+                <!-- Center Hub Icon -->
+                <div class="absolute w-16 h-16 bg-white rounded-full border-4 border-pink-300 shadow-lg flex items-center justify-center z-10">
+                    <span class="text-2xl animate-gentle-bounce">👑</span>
+                </div>
+            </div>
+
+            <!-- Power Bar Indicator (Shows while holding button) -->
+            <div class="w-64 bg-white/70 rounded-full h-4 p-0.5 border border-pink-200 overflow-hidden shadow-inner">
+                <div id="powerBar" class="h-full bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-500 rounded-full w-0 transition-all duration-75"></div>
+            </div>
+
+            <!-- Spin Control Button (Press and Hold) -->
+            <div class="flex flex-col items-center space-y-2 w-full max-w-xs">
+                <button id="spinBtn" 
+                        class="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold text-xl rounded-2xl btn-shadow transition-all duration-150 flex items-center justify-center space-x-2 select-none active:scale-95">
+                    <span>🎰</span>
+                    <span id="spinBtnText">DREHEN (Gedrückt halten!)</span>
+                </button>
+                <p class="text-xs text-slate-500">Tipp: Je länger gedrückt, desto schneller!</p>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: STATISTIK ================= -->
+        <section id="tab-stats" class="hidden flex-col space-y-4">
+            
+            <div class="bg-white/90 backdrop-blur-sm rounded-3xl p-5 card-shadow border border-pink-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>📊</span> Panda-Statistik
+                    </h2>
+                    <button onclick="generateMockData()" class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded-lg font-medium transition">
+                        + Testdaten
+                    </button>
+                </div>
+
+                <!-- Filter Segmented Control -->
+                <div class="flex bg-pink-100/70 p-1 rounded-2xl mb-5 border border-pink-200">
+                    <button onclick="setStatsFilter('week')" id="filter-week" class="filter-btn flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-pink-600 shadow-sm">Woche</button>
+                    <button onclick="setStatsFilter('month')" id="filter-month" class="filter-btn flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600">Monat</button>
+                    <button onclick="setStatsFilter('year')" id="filter-year" class="filter-btn flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600">Jahr</button>
+                </div>
+
+                <!-- Stats Summary Header -->
+                <div class="text-center mb-4">
+                    <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Gesamte Auswahlen</span>
+                    <div id="totalSpinsCount" class="text-3xl font-extrabold text-pink-600">0</div>
+                </div>
+
+                <!-- Panda Chart List -->
+                <div id="statsList" class="space-y-4">
+                    <!-- Dynamic Panda Stat Bars will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Clear Data Button -->
+            <div class="text-center pt-2">
+                <button onclick="confirmResetStats()" class="text-xs text-slate-400 hover:text-red-500 underline transition">
+                    Statistik zurücksetzen
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="w-full bg-white/90 backdrop-blur-md border-t border-pink-200 py-2 px-6 sticky bottom-0 z-30">
+        <div class="max-w-md mx-auto flex justify-around items-center">
+            <button onclick="switchTab('wheel')" id="nav-wheel" class="nav-btn flex flex-col items-center text-pink-500 font-bold text-xs space-y-1">
+                <span class="text-2xl">🎡</span>
+                <span>Drehrad</span>
+            </button>
+            <button onclick="switchTab('stats')" id="nav-stats" class="nav-btn flex flex-col items-center text-slate-400 font-medium text-xs space-y-1 hover:text-pink-400 transition">
+                <span class="text-2xl">📈</span>
+                <span>Statistik</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ================= WINNER CELEBRATION MODAL ================= -->
+    <div id="winnerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white rounded-3xl p-6 max-w-xs w-full text-center card-shadow border-4 border-pink-300 transform scale-95 transition-all duration-300 flex flex-col items-center relative overflow-hidden">
+            
+            <!-- Confetti Canvas overlay inside modal -->
+            <div class="absolute inset-0 pointer-events-none"></div>
+
+            <div class="text-pink-500 text-sm font-bold uppercase tracking-widest mb-1">Panda des Tages! 🎉</div>
+            
+            <div class="relative my-3 group">
+                <!-- Glowing background ring -->
+                <div class="absolute -inset-2 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 rounded-full blur-md opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+                
+                <!-- Winner Avatar -->
+                <div id="modalPandaImageContainer" class="relative w-32 h-32 rounded-full border-4 border-white bg-pink-100 overflow-hidden flex items-center justify-center shadow-inner">
+                    <!-- Image inserted dynamically -->
+                </div>
+            </div>
+
+            <h3 id="modalPandaName" class="text-2xl font-bold text-slate-800 mb-1">Panda Name</h3>
+            <p class="text-xs text-slate-500 mb-5">Dein treuer Begleiter für den heutigen Tag!</p>
+
+            <button onclick="closeWinnerModal()" class="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition">
+                Juhuu! ❤️
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Data Structure for the 5 Pandas
+        const pandas = [
+            { id: 'boo', name: 'Boo', file: 'Boo.jpg', color: '#FFB7B2', textColor: '#801818' },
+            { id: 'flauschi', name: 'Flauschi', file: 'Flauschi.jpg', color: '#FFDAC1', textColor: '#7A4B17' },
+            { id: 'mrflauschibaer', name: 'MrFlauschibär', file: 'MrFlauschibär.jpg', color: '#E2F0CB', textColor: '#2D5915' },
+            { id: 'pandie', name: 'Pandie', file: 'Pandie.jpg', color: '#B5EAD7', textColor: '#0F543F' },
+            { id: 'sowli', name: 'Sowli', file: 'Sowli.jpg', color: '#C7CEEA', textColor: '#263469' }
+        ];
+
+        // Loaded Image Cache & Fallbacks
+        const pandaImages = {};
+
+        // State Variables
+        let currentAngle = 0;
+        let isSpinning = false;
+        let holdStartTime = 0;
+        let holdTimer = null;
+        let spinVelocity = 0;
+        let activeTab = 'wheel';
+        let currentStatsFilter = 'week';
+        const STORAGE_KEY = 'annas_panda_app_history_v1';
+
+        // Preload Images with SVG Fallback if image file fails to load
+        function preloadImages() {
+            pandas.forEach(panda => {
+                const img = new Image();
+                img.src = panda.file;
+                img.onload = () => {
+                    pandaImages[panda.id] = img;
+                    drawWheel();
+                };
+                img.onerror = () => {
+                    // SVG Avatar Fallback if jpg is not found directly
+                    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="48" fill="${panda.color}"/>
+                        <!-- Bear Ears -->
+                        <circle cx="25" cy="25" r="14" fill="#333"/>
+                        <circle cx="75" cy="25" r="14" fill="#333"/>
+                        <circle cx="25" cy="25" r="7" fill="#ffb6c1"/>
+                        <circle cx="75" cy="25" r="7" fill="#ffb6c1"/>
+                        <!-- Head -->
+                        <circle cx="50" cy="55" r="32" fill="#fff"/>
+                        <!-- Eye Patches -->
+                        <ellipse cx="38" cy="50" rx="9" ry="12" fill="#333" transform="rotate(-15 38 50)"/>
+                        <ellipse cx="62" cy="50" rx="9" ry="12" fill="#333" transform="rotate(15 62 50)"/>
+                        <!-- Eyes -->
+                        <circle cx="38" cy="48" r="3" fill="#fff"/>
+                        <circle cx="62" cy="48" r="3" fill="#fff"/>
+                        <!-- Nose & Mouth -->
+                        <ellipse cx="50" cy="62" rx="5" ry="3.5" fill="#333"/>
+                        <path d="M46 66 Q50 70 54 66" stroke="#333" stroke-width="2" fill="none"/>
+                    </svg>`;
+                    
+                    const fallbackImg = new Image();
+                    fallbackImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+                    fallbackImg.onload = () => {
+                        pandaImages[panda.id] = fallbackImg;
+                        drawWheel();
+                    };
+                };
+            });
+        }
+
+        // Setup Canvas Wheel
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const numSegments = pandas.length;
+        const segmentAngle = (2 * Math.PI) / numSegments;
+
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 8;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            pandas.forEach((panda, i) => {
+                const angleStart = currentAngle + i * segmentAngle;
+                const angleEnd = angleStart + segmentAngle;
+
+                // Segment Slice Background
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, angleStart, angleEnd);
+                ctx.closePath();
+                ctx.fillStyle = panda.color;
+                ctx.fill();
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                // Draw Text & Image inside Segment
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                const midAngle = angleStart + segmentAngle / 2;
+                ctx.rotate(midAngle);
+
+                // Text
+                ctx.fillStyle = panda.textColor;
+                ctx.font = 'bold 14px Fredoka, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(panda.name, radius * 0.65, 5);
+
+                // Image / Icon
+                const img = pandaImages[panda.id];
+                if (img) {
+                    ctx.save();
+                    const imgSize = 42;
+                    const imgX = radius * 0.35 - imgSize / 2;
+                    const imgY = -imgSize / 2;
+                    
+                    // Circular Crop for Image
+                    ctx.beginPath();
+                    ctx.arc(imgX + imgSize/2, imgY + imgSize/2, imgSize/2, 0, Math.PI * 2);
+                    ctx.clip();
+                    ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
+                    ctx.restore();
+
+                    // White Ring border around image
+                    ctx.beginPath();
+                    ctx.arc(imgX + imgSize/2, imgY + imgSize/2, imgSize/2, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            });
+        }
+
+        // Hold-to-Spin Mechanism
+        const spinBtn = document.getElementById('spinBtn');
+        const spinBtnText = document.getElementById('spinBtnText');
+        const powerBar = document.getElementById('powerBar');
+
+        function startHold(e) {
+            e.preventDefault();
+            if (isSpinning) return;
+
+            holdStartTime = Date.now();
+            powerBar.style.width = '0%';
+            spinBtnText.textContent = 'SCHWUNG LÄDT... ⚡';
+
+            holdTimer = setInterval(() => {
+                const elapsed = Date.now() - holdStartTime;
+                const maxHold = 2500; // max 2.5s hold time
+                const progress = Math.min(100, (elapsed / maxHold) * 100);
+                powerBar.style.width = progress + '%';
+
+                if (progress >= 100) {
+                    endHold(); // auto release at max speed
+                }
+            }, 30);
+        }
+
+        function endHold() {
+            if (!holdStartTime || isSpinning) return;
+
+            const elapsed = Date.now() - holdStartTime;
+            clearInterval(holdTimer);
+            holdStartTime = 0;
+
+            // Calculate Initial Velocity based on hold duration (min 15, max 45)
+            const holdRatio = Math.min(1, elapsed / 2200);
+            spinVelocity = 0.25 + holdRatio * 0.45; // Radians per frame
+
+            startSpinning();
+        }
+
+        function startSpinning() {
+            isSpinning = true;
+            spinBtn.disabled = true;
+            spinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            spinBtnText.textContent = 'DREHT SICH...';
+
+            let friction = 0.985; // Deceleration rate
+            let lastSegmentIndex = -1;
+
+            function animateSpin() {
+                if (spinVelocity > 0.002) {
+                    currentAngle += spinVelocity;
+                    currentAngle %= (Math.PI * 2);
+                    spinVelocity *= friction;
+
+                    // Pointer Tick Animation Effect on segment crossing
+                    const pointerAngle = (3 * Math.PI / 2); // Top Pointer Position (270 degrees)
+                    let normalizedAngle = (pointerAngle - currentAngle) % (Math.PI * 2);
+                    if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+                    const currentSegment = Math.floor(normalizedAngle / segmentAngle) % numSegments;
+
+                    if (currentSegment !== lastSegmentIndex) {
+                        lastSegmentIndex = currentSegment;
+                        triggerPointerTick();
+                    }
+
+                    drawWheel();
+                    requestAnimationFrame(animateSpin);
+                } else {
+                    // Wheel Stopped
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    spinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    spinBtnText.textContent = 'DREHEN (Gedrückt halten!)';
+                    powerBar.style.width = '0%';
+
+                    determineWinner();
+                }
+            }
+
+            requestAnimationFrame(animateSpin);
+        }
+
+        function triggerPointerTick() {
+            const pointer = document.getElementById('wheelPointer');
+            pointer.classList.remove('pointer-active');
+            void pointer.offsetWidth; // Trigger reflow
+            pointer.classList.add('pointer-active');
+        }
+
+        // Determine Winner Segment
+        function determineWinner() {
+            // Pointer is at 270 degrees (Top)
+            const pointerAngle = (3 * Math.PI / 2);
+            let normalizedAngle = (pointerAngle - currentAngle) % (Math.PI * 2);
+            if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+
+            const winnerIndex = Math.floor(normalizedAngle / segmentAngle) % numSegments;
+            const winnerPanda = pandas[winnerIndex];
+
+            // Save Choice to LocalStorage
+            savePandaSelection(winnerPanda.id);
+
+            // Update Header Badge
+            updateTodayBadge(winnerPanda.name);
+
+            // Trigger Winner Modal & Confetti
+            showWinnerModal(winnerPanda);
+        }
+
+        // Event Listeners for Hold Action (Touch & Mouse)
+        spinBtn.addEventListener('mousedown', startHold);
+        spinBtn.addEventListener('mouseup', endHold);
+        spinBtn.addEventListener('mouseleave', endHold);
+
+        spinBtn.addEventListener('touchstart', startHold, { passive: false });
+        spinBtn.addEventListener('touchend', endHold, { passive: false });
+
+        // LocalStorage Management
+        function getHistory() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function savePandaSelection(pandaId) {
+            const history = getHistory();
+            history.push({
+                pandaId: pandaId,
+                timestamp: Date.now()
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            renderStats();
+        }
+
+        function updateTodayBadge(name) {
+            const badge = document.getElementById('todayFavoritBadge');
+            const nameTxt = document.getElementById('todayPandaNameText');
+            nameTxt.textContent = name;
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+        }
+
+        // Winner Modal & Celebrations
+        function showWinnerModal(panda) {
+            const modal = document.getElementById('winnerModal');
+            const imgContainer = document.getElementById('modalPandaImageContainer');
+            const nameEl = document.getElementById('modalPandaName');
+
+            // Set content
+            nameEl.textContent = panda.name;
+            imgContainer.innerHTML = '';
+
+            const img = pandaImages[panda.id];
+            if (img) {
+                const cloneImg = img.cloneNode(true);
+                cloneImg.className = 'w-full h-full object-cover rounded-full';
+                imgContainer.appendChild(cloneImg);
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove('scale-95');
+                modal.firstElementChild.classList.add('scale-100');
+            }, 10);
+
+            // Trigger Child-friendly Confetti
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#f472b6', '#a78bfa', '#34d399', '#fbbf24']
+                });
+            }
+        }
+
+        function closeWinnerModal() {
+            const modal = document.getElementById('winnerModal');
+            modal.firstElementChild.classList.remove('scale-100');
+            modal.firstElementChild.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        // Tab Navigation
+        function switchTab(tab) {
+            activeTab = tab;
+            const wheelSection = document.getElementById('tab-wheel');
+            const statsSection = document.getElementById('tab-stats');
+            const navWheel = document.getElementById('nav-wheel');
+            const navStats = document.getElementById('nav-stats');
+
+            if (tab === 'wheel') {
+                wheelSection.classList.remove('hidden');
+                statsSection.classList.add('hidden');
+                statsSection.classList.remove('flex');
+                
+                navWheel.classList.add('text-pink-500', 'font-bold');
+                navWheel.classList.remove('text-slate-400', 'font-medium');
+                navStats.classList.add('text-slate-400', 'font-medium');
+                navStats.classList.remove('text-pink-500', 'font-bold');
+            } else {
+                wheelSection.classList.add('hidden');
+                statsSection.classList.remove('hidden');
+                statsSection.classList.add('flex');
+
+                navStats.classList.add('text-pink-500', 'font-bold');
+                navStats.classList.remove('text-slate-400', 'font-medium');
+                navWheel.classList.add('text-slate-400', 'font-medium');
+                navWheel.classList.remove('text-pink-500', 'font-bold');
+
+                renderStats();
+            }
+        }
+
+        // Statistics Filtering & Rendering
+        function setStatsFilter(filter) {
+            currentStatsFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-pink-600', 'shadow-sm');
+                btn.classList.add('text-slate-600');
+            });
+            const activeBtn = document.getElementById(`filter-${filter}`);
+            activeBtn.classList.add('bg-white', 'text-pink-600', 'shadow-sm');
+            activeBtn.classList.remove('text-slate-600');
+
+            renderStats();
+        }
+
+        function renderStats() {
+            const history = getHistory();
+            const now = new Date();
+            
+            // Filter timeframe
+            const filteredHistory = history.filter(item => {
+                const itemDate = new Date(item.timestamp);
+                const diffTime = Math.abs(now - itemDate);
+                const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+                if (currentStatsFilter === 'week') return diffDays <= 7;
+                if (currentStatsFilter === 'month') return diffDays <= 30;
+                if (currentStatsFilter === 'year') return diffDays <= 365;
+                return true;
+            });
+
+            // Count per panda
+            const counts = { boo: 0, flauschi: 0, mrflauschibaer: 0, pandie: 0, sowli: 0 };
+            filteredHistory.forEach(item => {
+                if (counts[item.pandaId] !== undefined) {
+                    counts[item.pandaId]++;
+                }
+            });
+
+            const total = filteredHistory.length;
+            document.getElementById('totalSpinsCount').textContent = total;
+
+            const statsList = document.getElementById('statsList');
+            statsList.innerHTML = '';
+
+            pandas.forEach(panda => {
+                const count = counts[panda.id];
+                const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+
+                const row = document.createElement('div');
+                row.className = 'flex items-center space-x-3 bg-pink-50/50 p-2.5 rounded-2xl border border-pink-100';
+
+                // Thumbnail avatar
+                let imgHtml = `<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-xs" style="background-color: ${panda.color}">${panda.name[0]}</div>`;
+                const img = pandaImages[panda.id];
+                if (img) {
+                    imgHtml = `<img src="${img.src}" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" />`;
+                }
+
+                row.innerHTML = `
+                    ${imgHtml}
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-sm text-slate-800">${panda.name}</span>
+                            <span class="text-xs font-bold text-pink-600">${count} Mal (${percentage}%)</span>
+                        </div>
+                        <div class="w-full bg-white rounded-full h-3 p-0.5 border border-pink-100 overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-500" style="width: ${percentage}%; background-color: ${panda.color}; border: 1px solid rgba(0,0,0,0.05)"></div>
+                        </div>
+                    </div>
+                `;
+
+                statsList.appendChild(row);
+            });
+        }
+
+        // Utility: Generate Mock Data for Testing Statistics
+        function generateMockData() {
+            const history = getHistory();
+            const now = Date.now();
+            const dayMs = 24 * 60 * 60 * 1000;
+
+            for (let i = 0; i < 25; i++) {
+                const randomPanda = pandas[Math.floor(Math.random() * pandas.length)].id;
+                const randomDaysAgo = Math.floor(Math.random() * 60); // items up to 60 days ago
+                history.push({
+                    pandaId: randomPanda,
+                    timestamp: now - (randomDaysAgo * dayMs)
+                });
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            renderStats();
+        }
+
+        function confirmResetStats() {
+            if (confirm("Möchtest du wirklich alle Statistiken zurücksetzen?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderStats();
+            }
+        }
+
+        // Initialize on Window Load
+        window.onload = function() {
+            preloadImages();
+            drawWheel();
+            renderStats();
+        };
+    </script>
+</body>
+</html>
